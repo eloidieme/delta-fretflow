@@ -5,21 +5,20 @@ import {useEffect, useRef} from 'react';
 import {useIntervalTimer} from './useIntervalTimer';
 
 export function useRunner() {
-  const {status, bpm, setStatus, activeExerciseId} = usePlayerStore();
+  // Pull activeDuration and activeTitle from store
+  const {status, bpm, setStatus, activeDuration} = usePlayerStore();
 
   const WARMUP_DURATION = 3;
-  const EXERCISE_DURATION = 10;
 
-  // Track the last second we beeped for (to avoid duplicate beeps)
+  // Use a ref to track if we just beeped (for countdown)
   const lastWarmupSecond = useRef<number>(WARMUP_DURATION + 1);
 
-  // -- Audio Helper --
+  // -- Audio Helper (same as before) --
   const playTone = (freq: number, type: 'beep'|'chime' = 'beep') => {
     const ctx =
         new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-
     osc.connect(gain);
     gain.connect(ctx.destination);
 
@@ -27,13 +26,11 @@ export function useRunner() {
     osc.frequency.setValueAtTime(freq, now);
 
     if (type === 'beep') {
-      // Short, dry beep for countdown
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       osc.start(now);
       osc.stop(now + 0.15);
     } else {
-      // Longer, pleasant chime for finish
       gain.gain.setValueAtTime(0.4, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
       osc.start(now);
@@ -46,55 +43,56 @@ export function useRunner() {
     setStatus('running');
   });
 
-  const exerciseTimer = useIntervalTimer(EXERCISE_DURATION, () => {
+  // KEY CHANGE: Pass activeDuration from store here
+  const exerciseTimer = useIntervalTimer(activeDuration, () => {
     setStatus('finished');
-    playTone(523.25, 'chime');  // C5 Chime
+    playTone(523.25, 'chime');
   });
 
   // -- State Machine Effect --
-  useEffect(() => {
-    metronome.setBpm(bpm);
+  useEffect(
+      () => {
+        metronome.setBpm(bpm);
 
-    switch (status) {
-      case 'idle':
-      case 'finished':
-        warmupTimer.reset();
-        exerciseTimer.reset();
-        metronome.stop();
-        lastWarmupSecond.current =
-            WARMUP_DURATION + 1;  // Reset countdown logic
-        break;
+        switch (status) {
+          case 'idle':
+          case 'finished':
+            warmupTimer.reset();
+            exerciseTimer.reset();
+            metronome.stop();
+            lastWarmupSecond.current = WARMUP_DURATION + 1;
+            break;
 
-      case 'warmup':
-        metronome.stop();
-        exerciseTimer.reset();
-        warmupTimer.start();
-        break;
+          case 'warmup':
+            metronome.stop();
+            exerciseTimer.reset();
+            warmupTimer.start();
+            break;
 
-      case 'running':
-        warmupTimer.pause();
-        metronome.start();
-        exerciseTimer.start();
-        break;
+          case 'running':
+            warmupTimer.pause();
+            metronome.start();
+            exerciseTimer.start();
+            break;
 
-      case 'paused':
-        warmupTimer.pause();
-        exerciseTimer.pause();
-        metronome.stop();
-        break;
-    }
-  }, [status, bpm]);
+          case 'paused':
+            warmupTimer.pause();
+            exerciseTimer.pause();
+            metronome.stop();
+            break;
+        }
+      },
+      [
+        status, bpm
+      ]);  // Note: We don't depend on activeDuration here to avoid resets
+           // mid-run
 
   // -- Audio Countdown Effect --
   useEffect(() => {
     if (status === 'warmup') {
-      // Logic: If we are at 3.0s, we want to beep "3".
-      // If we cross into 2.9s, we don't beep again until 2.0s.
       const currentSecond = Math.ceil(warmupTimer.timeLeft);
-
-      // Only beep if the integer second has changed AND it's not 0
       if (currentSecond < lastWarmupSecond.current && currentSecond > 0) {
-        playTone(440);  // A4 (Standard countdown beep)
+        playTone(440);
         lastWarmupSecond.current = currentSecond;
       }
     }

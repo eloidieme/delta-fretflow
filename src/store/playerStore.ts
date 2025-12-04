@@ -1,52 +1,46 @@
 import {create} from 'zustand';
 
-// 1. The States of the Runner Machine (Spec Section 4.1)
-export type PlayerStatus =|'idle'  // Nothing loaded
-    |'warmup'                      // The 3-second countdown before an exercise
-    |'running'                     // Exercise in progress
-    |'paused'                      // User hit pause OR inter-exercise break
-    |'finished';                   // Playlist complete
+// 1. Define the statuses
+export type PlayerStatus = 'idle'|'warmup'|'running'|'paused'|'finished';
 
-// 2. The Store Interface
+// 2. Define the Store State
 interface PlayerState {
-  // Status
+  // Engine Status
   status: PlayerStatus;
+  bpm: number;
 
-  // Active Data
-  activePlaylistId: number|null;
-  activeExerciseId: number|null;  // ID of the currently running exercise
-
-  // Playback Controls (Spec Section 4.2)
-  bpm: number;     // Global or Local Tempo
-  volume: number;  // Master volume (0.0 to 1.0)
+  // Active Session Data (New!)
+  activeTitle: string;
+  activeDuration: number;  // Total seconds for the current exercise
 
   // Actions
   setStatus: (status: PlayerStatus) => void;
   setBpm: (bpm: number) => void;
-  loadPlaylist: (playlistId: number) => void;
+
+  // Load a new session configuration
+  loadSession: (title: string, duration: number, bpm: number) => void;
   reset: () => void;
 }
 
-// 3. The Implementation
 export const usePlayerStore = create<PlayerState>(
     (set) => ({
-      // Initial State
       status: 'idle',
-      activePlaylistId: null,
-      activeExerciseId: null,
-      bpm: 120,  // Default standard tempo
-      volume: 0.8,
+      bpm: 120,
 
-      // Actions
+      // Default State
+      activeTitle: 'Quick Start',
+      activeDuration: 300,  // Default 5 mins if nothing loaded
+
       setStatus: (status) => set({status}),
-
       setBpm: (bpm) => set({bpm}),
 
-      loadPlaylist: (playlistId) => set({
-        activePlaylistId: playlistId,
-        status: 'idle'  // Ready to start
+      loadSession: (title, duration, bpm) => set({
+        activeTitle: title,
+        activeDuration: duration,
+        bpm: bpm,
+        status: 'idle'  // Reset to idle so user has to hit "Start" (or we can
+                        // auto-start)
       }),
 
-      reset: () =>
-          set({status: 'idle', activePlaylistId: null, activeExerciseId: null})
+      reset: () => set({status: 'idle'})
     }));
