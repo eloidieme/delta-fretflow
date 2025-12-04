@@ -29,7 +29,13 @@ export function Library() {
 
   const handleStart = (ex: any) => {
     // 1. Load the specific exercise configuration into the Global Store
-    loadSession(ex.title, ex.settings.duration, ex.settings.bpm);
+    // We safely access notes, defaulting to empty string if undefined
+    loadSession(
+      ex.title,
+      ex.settings.duration,
+      ex.settings.bpm,
+      ex.settings.notes || ""
+    );
 
     // 2. Redirect to the Dashboard where the Runner lives
     navigate("/");
@@ -89,7 +95,7 @@ export function Library() {
             {/* Badges */}
             <div className="flex gap-3 text-xs text-slate-400 mb-6">
               <span className="bg-slate-900 px-2 py-1 rounded border border-slate-800">
-                {ex.settings.duration / 60} min
+                {(ex.settings.duration / 60).toFixed(1)} min
               </span>
               <span className="bg-slate-900 px-2 py-1 rounded border border-slate-800">
                 {ex.settings.bpm} BPM
