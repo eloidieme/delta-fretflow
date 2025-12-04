@@ -5,7 +5,7 @@ function App() {
         DeltaFretFlow <span className="text-sm text-slate-400">v1.0</span>
       </h1>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
