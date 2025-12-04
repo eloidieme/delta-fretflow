@@ -28,16 +28,19 @@ export function Library() {
   };
 
   const handleStart = (ex: any) => {
-    // 1. Load the specific exercise configuration into the Global Store
-    // We safely access notes, defaulting to empty string if undefined
+    // Determine App Type from the DB record (default to basic if missing)
+    const appType = ex.appType || "basic_utility";
+
+    // Pass everything to the store
     loadSession(
       ex.title,
+      appType,
+      ex.settings.config || {}, // Pass specific config (e.g. {root:'C', scale:'minor'})
       ex.settings.duration,
       ex.settings.bpm,
       ex.settings.notes || ""
     );
 
-    // 2. Redirect to the Dashboard where the Runner lives
     navigate("/");
   };
 

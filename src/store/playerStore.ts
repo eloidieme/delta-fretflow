@@ -1,63 +1,62 @@
 import {create} from 'zustand';
+import {type AppType} from '@/db/db';  // Import AppType
 
-// 1. The States of the Runner Machine
-export type PlayerStatus =|'idle'  // Nothing loaded
-    |'warmup'                      // The 3-second countdown before an exercise
-    |'running'                     // Exercise in progress
-    |'paused'                      // User hit pause OR inter-exercise break
-    |'finished';                   // Playlist complete
+export type PlayerStatus = 'idle'|'warmup'|'running'|'paused'|'finished';
 
-// 2. The Store Interface
 interface PlayerState {
-  // -- Engine Status --
   status: PlayerStatus;
-  bpm: number;     // Global Tempo
-  volume: number;  // Master volume (0.0 to 1.0)
+  bpm: number;
+  volume: number;
 
   // -- Active Session Data --
   activeTitle: string;
-  activeDuration: number;  // Total seconds for the current exercise
-  activeNotes: string;     // Instructions or notes for the current exercise
+  activeApp: AppType;  // <--- NEW: Which App engine to load?
+  activeConfig:
+      any;  // <--- NEW: Specific settings (e.g. { root: 'C', scale: 'minor' })
+  activeDuration: number;
+  activeNotes: string;
 
   // -- Actions --
   setStatus: (status: PlayerStatus) => void;
   setBpm: (bpm: number) => void;
 
-  // Load a new session configuration
+  // Update signature to accept appType and config
   loadSession:
-      (title: string, duration: number, bpm: number, notes?: string) => void;
+      (title: string, appType: AppType, config: any, duration: number,
+       bpm: number, notes?: string) => void;
 
   reset: () => void;
 }
 
-// 3. The Implementation
 export const usePlayerStore = create<PlayerState>(
     (set) => ({
-      // Initial State
       status: 'idle',
       bpm: 120,
       volume: 0.8,
 
       activeTitle: 'Quick Start',
-      activeDuration: 300,  // Default 5 mins
-      activeNotes: '',      // Default empty
+      activeApp: 'basic_utility',  // Default
+      activeConfig: {},
+      activeDuration: 300,
+      activeNotes: '',
 
-      // Actions
       setStatus: (status) => set({status}),
-
       setBpm: (bpm) => set({bpm}),
 
-      loadSession: (title, duration, bpm, notes = '') => set({
+      loadSession: (title, appType, config, duration, bpm, notes = '') => set({
         activeTitle: title,
+        activeApp: appType,    // Set App
+        activeConfig: config,  // Set Config
         activeDuration: duration,
         bpm: bpm,
         activeNotes: notes,
-        status: 'idle'  // Reset to idle so user has to hit "Start"
+        status: 'idle'
       }),
 
       reset: () => set({
         status: 'idle',
         activeTitle: 'Quick Start',
+        activeApp: 'basic_utility',
         activeDuration: 300,
         activeNotes: ''
       })
