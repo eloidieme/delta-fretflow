@@ -1,29 +1,29 @@
-import { useEffect } from "react";
 import { Play, Pause, SkipForward, Volume2 } from "lucide-react";
 import { usePlayerStore } from "@/store/playerStore";
-import { metronome } from "@/audio/MetronomeEngine";
 
 export function PlayerBar() {
   // 1. Access the store state and actions
   const { status, bpm, setStatus } = usePlayerStore();
 
-  // 2. Sync the Metronome Engine with the Store
-  useEffect(() => {
-    // Whenever BPM changes in the UI/Store, update the Audio Engine immediately
-    metronome.setBpm(bpm);
-  }, [bpm]);
-
-  // 3. Handle Play/Pause Logic
+  // 2. Handle Play/Pause Logic (State Machine Transitions)
   const togglePlay = () => {
-    if (status === "running") {
-      // Stop Logic
-      metronome.stop();
-      setStatus("paused");
-    } else {
-      // Start Logic
-      // (Later, this will trigger the 'Warmup' state first, but for now we test audio direct)
-      metronome.start();
-      setStatus("running");
+    switch (status) {
+      case "idle":
+      case "finished":
+        // Start fresh sequence
+        setStatus("warmup");
+        break;
+
+      case "running":
+      case "warmup":
+        // Pause whatever is happening
+        setStatus("paused");
+        break;
+
+      case "paused":
+        // Resume immediately (skip warmup on resume)
+        setStatus("running");
+        break;
     }
   };
 
@@ -50,7 +50,7 @@ export function PlayerBar() {
             onClick={togglePlay}
             className="w-12 h-12 bg-blue-500 hover:bg-blue-400 rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transition hover:scale-105 active:scale-95"
           >
-            {status === "running" ? (
+            {status === "running" || status === "warmup" ? (
               <Pause size={24} fill="currentColor" />
             ) : (
               <Play size={24} fill="currentColor" className="ml-1" />
@@ -74,7 +74,10 @@ export function PlayerBar() {
         {/* Status Badge */}
         <span
           className={`text-xs uppercase font-bold tracking-wider whitespace-nowrap transition-colors
-          ${status === "running" ? "text-green-400" : "text-slate-500"}
+          ${status === "running" ? "text-green-400" : ""}
+          ${status === "warmup" ? "text-orange-400" : ""}
+          ${status === "paused" ? "text-yellow-400" : ""}
+          ${status === "idle" || status === "finished" ? "text-slate-500" : ""}
         `}
         >
           {status}
